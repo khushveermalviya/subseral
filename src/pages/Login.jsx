@@ -11,7 +11,7 @@ const Login = () => {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) {
-      fetch("http://localhost:4000/auth/validate-token", {
+      fetch("https://subseral.onrender.com/auth/validate-token", {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())
@@ -27,7 +27,7 @@ const Login = () => {
     setIsLoading(true); // Show the loader
     setTimeout(() => {
       // Redirect to GitHub login after 5 seconds
-      window.location.href = "http://localhost:4000/auth/github";
+      window.location.href = "https://subseral.onrender.com/auth/github";
     }, 5000); // 5-second delay
   };
 
