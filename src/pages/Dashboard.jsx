@@ -1,4 +1,3 @@
-
 import DashboardHeader from "../components/DashboardHeader.jsx";
 import RepoCard from "../components/RepoCard.jsx";
 import StatsOverview from "../components/StatsOverview.jsx"
@@ -21,11 +20,8 @@ import {
   Download
 } from "lucide-react";
 
-
-
 const Dashboard = () => {
-    const navigate = useNavigate();
-  const [token, setToken] = useState(null);
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,54 +31,52 @@ const Dashboard = () => {
   const [showDeployModal, setShowDeployModal] = useState(false);
 
   useEffect(() => {
-    const urlToken = new URLSearchParams(window.location.search).get("token");
-    if (urlToken) {
-      localStorage.setItem("access_token", urlToken);
-      setToken(urlToken);
-      window.history.replaceState({}, "", "/dashboard");
-    } else {
-      const storedToken = localStorage.getItem("access_token");
-      if (storedToken) {
-        setToken(storedToken);
-      } else {
-        navigate("/");
-      }
-    }
-  }, [navigate]);
-
-  useEffect(() => {
-    if (!token) return;
-
     const fetchData = async () => {
-        try {
-          const userRes = await fetch("https://api.github.com/user", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const userData = await userRes.json();
-          setUser(userData);
-  
-          const repoRes = await fetch("https://api.github.com/user/repos", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          const repoData = await repoRes.json();
-          setRepos(repoData);
-        } catch (err) {
-          console.error("Error fetching data:", err);
-          localStorage.removeItem("access_token");
-          navigate("/");
-        } finally {
-          setLoading(false);
+      const token = localStorage.getItem("access_token");
+      
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const userRes = await fetch("https://api.github.com/user", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (!userRes.ok) {
+          throw new Error('Failed to fetch user data');
         }
-      };
+        
+        const userData = await userRes.json();
+        setUser(userData);
+
+        const repoRes = await fetch("https://api.github.com/user/repos", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        
+        if (!repoRes.ok) {
+          throw new Error('Failed to fetch repositories');
+        }
+        
+        const repoData = await repoRes.json();
+        setRepos(repoData);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        localStorage.removeItem("access_token");
+        navigate("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchData();
-  }, [token]);
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     console.log("User logged out");
     navigate("/login");
-    window.location.reload(); // optional: full refresh
   };
   
   const handleDeploy = (repo) => {
