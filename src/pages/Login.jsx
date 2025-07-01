@@ -7,26 +7,65 @@ import ConnectionLoader from "../components/ConnectionLoader";
 const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false); // State to control the loader
+  const [error, setError] = useState(null); // State to handle errors
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    if (token) {
-      fetch("https://subseral.onrender.com/auth/validate-token", {
-        headers: { Authorization: `Bearer ${token}` },
+    // Check if the URL contains the GitHub OAuth code
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+
+    if (code) {
+      // Exchange the code for an access token
+      setIsLoading(true);
+      fetch("https://subseral.onrender.com/auth/github/callback", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
       })
         .then((res) => res.json())
         .then((data) => {
-          if (data.valid) {
-            navigate("/");
+          if (data.access_token) {
+            // Save the token to localStorage
+            localStorage.setItem("access_token", data.access_token);
+            navigate("/"); // Redirect to the homepage
+          } else {
+            throw new Error("Failed to retrieve access token");
           }
+        })
+        .catch((err) => {
+          console.error("OAuth error:", err);
+          setError("Authentication failed. Please try again.");
+        })
+        .finally(() => {
+          setIsLoading(false);
         });
+    } else {
+      // Check if the user is already logged in
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        fetch("https://subseral.onrender.com/auth/validate-token", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.valid) {
+              navigate("/"); // Redirect to the homepage
+            }
+          })
+          .catch((err) => {
+            console.error("Token validation error:", err);
+            setError("Session expired. Please log in again.");
+          });
+      }
     }
   }, [navigate]);
 
   const handleLogin = () => {
     setIsLoading(true); // Show the loader
     setTimeout(() => {
-      // Redirect to GitHub login after 5 seconds
+      // Redirect to GitHub login
       window.location.href = "https://subseral.onrender.com/auth/github";
     }, 5000); // 5-second delay
   };
@@ -92,6 +131,13 @@ const Login = () => {
             <span>Login with GitHub</span>
           </div>
         </button>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 text-red-500 text-sm">
+            {error}
+          </div>
+        )}
 
         {/* Additional subtle text */}
         <div className="mt-8 animate-fade-in" style={{ animationDelay: '0.5s' }}>
